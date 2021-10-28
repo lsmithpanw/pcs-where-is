@@ -129,7 +129,7 @@ CONFIG = {}
 try:
     from config import *
 except ImportError:
-    output('Error reading config')
+    output('Error reading configuration file: verify config.py exists in the same directory as this script.')
     exit(1)
 
 configured = False
@@ -137,7 +137,7 @@ for stack in CONFIG['STACKS']:
     if CONFIG['STACKS'][stack]['access_key'] != None:
         configured = True
 if (not configured):
-    output("It appears you haven't configured credentials to access the Prisma Cloud stacks. Copy config.py.org to config.py and put them into your config.py file")
+    output('Error reading configuration file: verify credentials for at least one stack.')
     exit(1)
 
 if args.ca_bundle:
