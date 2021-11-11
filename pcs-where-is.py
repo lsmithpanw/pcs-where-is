@@ -3,8 +3,10 @@
 import argparse
 import json
 import os
+import re
 import requests
 import sys
+import time
 
 from datetime import datetime
 
@@ -17,7 +19,7 @@ pc_parser = argparse.ArgumentParser(description='Where is this Tenant?', prog=os
 pc_parser.add_argument(
     'customer_name',
     type=str,
-    help='*Required* Customer Name')
+    help='*Required* Customer Name, or filename containg a (JSON) array of Customer Names')
 pc_parser.add_argument(
     '--ca_bundle',
     default=os.environ.get('CA_BUNDLE', None),
@@ -69,22 +71,20 @@ def execute(action, url, token, ca_bundle=None, requ_data=None):
             api_response = requests.request(action, url, headers=headers, verify=ca_bundle, data=requ_data)
             if api_response.ok:
                 break # retry loop
+    if DEBUG_MODE:
+        output(api_response.text)
     if api_response.ok:
         try:
             result = json.loads(api_response.content)
         except ValueError:
             output('API (%s) responded with an error\n%s' % (endpoint, api_response.content))
             sys.exit(1)
-    else:
-        if DEBUG_MODE:
-            output(api_response.content)
     return result
 
 def find_customer(stack, tenants, customer_name, url, ca_bundle, token):
     count = 0
     if not tenants:
         return count
-
     customer_name_lower = customer_name.lower()
     for customer in tenants:
         customer_lower = customer['customerName'].lower()
@@ -105,7 +105,6 @@ def find_customer(stack, tenants, customer_name, url, ca_bundle, token):
             output('\tEval:          %s' % customer['eval'])
             output('\tActive:        %s' % customer['active'])
             output('\tCredits:       %s' % customer['workloads'])
-
             usage_query = json.dumps({'customerName': customer['customerName'], 'timeRange': {'type':'relative','value': {'amount': 1,'unit': 'month'}}})
             usage = execute('POST', '%s/_support/license/api/v1/usage/time_series' % url, token, ca_bundle, usage_query)
             if DEBUG_MODE:
@@ -115,9 +114,7 @@ def find_customer(stack, tenants, customer_name, url, ca_bundle, token):
                 if 'counts' in current_usage and len(current_usage['counts']) > 0:
                     current_usage_count = sum(sum(c.values()) for c in current_usage['counts'].values())
                     output('\tUsed Credits:  %s' % current_usage_count)
-
             output()
-
             count += 1
     return count
 
@@ -143,15 +140,30 @@ if (not configured):
 if args.ca_bundle:
     CONFIG['CA_BUNDLE'] = args.ca_bundle
 
-CONFIG['CUSTOMER_NAME'] = args.customer_name
+if os.path.isfile(args.customer_name):
+    with open(args.customer_name, 'r', encoding='utf8') as f:
+        CONFIG['CUSTOMERS'] = json.load(f)
+else:
+    CONFIG['CUSTOMERS'] = [args.customer_name]
 
-found = 0
-
-for stack in CONFIG['STACKS']:
-    if CONFIG['STACKS'][stack]['access_key']:
-        token     = login(CONFIG['STACKS'][stack]['url'], CONFIG['STACKS'][stack]['access_key'], CONFIG['STACKS'][stack]['secret_key'], CONFIG['CA_BUNDLE'])
-        tenants = execute('GET', '%s/_support/customer' % CONFIG['STACKS'][stack]['url'], token, CONFIG['CA_BUNDLE'])
-        found    += find_customer(stack, tenants, CONFIG['CUSTOMER_NAME'], CONFIG['STACKS'][stack]['url'], CONFIG['CA_BUNDLE'], token)
-
-if found == 0:
-    output('%s not found on any configured stack' % CONFIG['CUSTOMER_NAME'])
+for customer in CONFIG['CUSTOMERS']:
+    found = 0
+    for stack in CONFIG['STACKS']:
+        if CONFIG['STACKS'][stack]['access_key']:
+            token = login(CONFIG['STACKS'][stack]['url'], CONFIG['STACKS'][stack]['access_key'], CONFIG['STACKS'][stack]['secret_key'], CONFIG['CA_BUNDLE'])
+            customers_file_name = '/tmp/%s-customers.json' % re.sub(r'\W+', '', stack).lower()
+            if os.path.isfile(customers_file_name):
+                with open(customers_file_name, 'r', encoding='utf8') as f:
+                    tenants = json.load(f)
+                    if DEBUG_MODE:
+                        output('Using cached customers file: %s' % customers_file_name)
+            else:
+                tenants = execute('GET', '%s/_support/customer' % CONFIG['STACKS'][stack]['url'], token, CONFIG['CA_BUNDLE'])
+                if tenants:
+                    result_file = open(customers_file_name, 'w')
+                    result_file.write(json.dumps(tenants))
+                    result_file.close()
+            found += find_customer(stack, tenants, customer, CONFIG['STACKS'][stack]['url'], CONFIG['CA_BUNDLE'], token)
+    if found == 0:
+        output('%s not found on any configured stack' % customer)
+    output()
