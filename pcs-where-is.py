@@ -8,7 +8,7 @@ import requests
 import sys
 import time
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 ##########################################################################################
 # Process arguments / parameters.
@@ -25,6 +25,9 @@ pc_parser.add_argument(
     default=os.environ.get('CA_BUNDLE', None),
     type=str,
     help='(Optional) - Custom CA (bundle) file')
+pc_parser.add_argument('--no_cache',
+    action='store_true',
+    help='(Optional) Clear cached data (Cache has an eight hour lifetime).')
 pc_parser.add_argument('-d', '--debug',
     action='store_true',
     help='(Optional) Enable debugging.')
@@ -153,13 +156,20 @@ for customer in CONFIG['CUSTOMERS']:
             token = login(CONFIG['STACKS'][stack]['url'], CONFIG['STACKS'][stack]['access_key'], CONFIG['STACKS'][stack]['secret_key'], CONFIG['CA_BUNDLE'])
             customers_file_name = '/tmp/%s-customers.json' % re.sub(r'\W+', '', stack).lower()
             if os.path.isfile(customers_file_name):
-                with open(customers_file_name, 'r', encoding='utf8') as f:
-                    tenants = json.load(f)
+                hours_ago = datetime.now() - timedelta(hours=8)
+                customers_file_date = datetime.fromtimestamp(os.path.getctime(customers_file_name))
+                if customers_file_date < hours_ago or args.no_cache:
                     if DEBUG_MODE:
-                        output('Using cached customers file: %s' % customers_file_name)
+                        output('Deleting cached stack file: %s' % customers_file_name)
+                    os.remove(customers_file_name)
+            if os.path.isfile(customers_file_name):
+                with open(customers_file_name, 'r', encoding='utf8') as f:
+                    if DEBUG_MODE:
+                        output('Reading cached stack file: %s' % customers_file_name)
+                    tenants = json.load(f)
             else:
                 tenants = execute('GET', '%s/_support/customer' % CONFIG['STACKS'][stack]['url'], token, CONFIG['CA_BUNDLE'])
-                if tenants:
+                if tenants and not args.no_cache:
                     result_file = open(customers_file_name, 'w')
                     result_file.write(json.dumps(tenants))
                     result_file.close()
