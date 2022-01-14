@@ -14,6 +14,8 @@ Copy `config.py.orig` to `config.py` and edit it to include your access keys.
 
 The `config.py` configuration file must exist in the curent working directory of the script.
 
+The script caches the responses from the endpoints for eight hours to improve performance. To clear that cache, specify `--no_cache`
+
 Use `-h` to review all command-line parameters.
 
 ### Example
