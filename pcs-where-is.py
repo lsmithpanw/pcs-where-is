@@ -143,9 +143,21 @@ configured = False
 for stack in CONFIG['STACKS']:
     if CONFIG['STACKS'][stack]['access_key'] != None:
         configured = True
+        break
 if (not configured):
     output('Error reading configuration file: verify credentials for at least one stack.')
     exit(1)
+
+if args.stack:
+    configured = False
+    for stack in CONFIG['STACKS']:
+        if args.stack.lower() == stack.lower():
+            if CONFIG['STACKS'][stack]['access_key'] != None:
+                 configured = True
+                 break
+    if (not configured):
+        output('Error reading configuration file: verify credentials for the specified stack.')
+        exit(1)
 
 if args.ca_bundle:
     CONFIG['CA_BUNDLE'] = args.ca_bundle
