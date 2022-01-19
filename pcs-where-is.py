@@ -25,12 +25,19 @@ pc_parser.add_argument(
     default=os.environ.get('CA_BUNDLE', None),
     type=str,
     help='(Optional) - Custom CA (bundle) file')
-pc_parser.add_argument('--no_cache',
+pc_parser.add_argument(
+    '-s', '--stack',
+    default='',
+    type=str,
+    help='(Optional) - Limit search to a stack (defined in the config file)')
+pc_parser.add_argument(
+    '--no_cache',
     action='store_true',
-    help='(Optional) Clear cached data (Cache has an eight hour lifetime).')
-pc_parser.add_argument('-d', '--debug',
+    help='(Optional) Clear cached data (Cache has an eight hour lifetime)')
+pc_parser.add_argument(
+    '-d', '--debug',
     action='store_true',
-    help='(Optional) Enable debugging.')
+    help='(Optional) Enable debugging')
 
 args = pc_parser.parse_args()
 
@@ -152,6 +159,8 @@ else:
 for customer in CONFIG['CUSTOMERS']:
     found = 0
     for stack in CONFIG['STACKS']:
+        if args.stack and args.stack.lower() != stack.lower():
+            continue
         if CONFIG['STACKS'][stack]['access_key']:
             token = login(CONFIG['STACKS'][stack]['url'], CONFIG['STACKS'][stack]['access_key'], CONFIG['STACKS'][stack]['secret_key'], CONFIG['CA_BUNDLE'])
             customers_file_name = '/tmp/%s-customers.json' % re.sub(r'\W+', '', stack).lower()

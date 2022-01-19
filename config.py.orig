@@ -1,17 +1,17 @@
 CONFIG = {}
 CONFIG['CA_BUNDLE'] = None
 CONFIG['STACKS'] = {
-    'API': {
+    'APP': {
         'url':        'https://api.prismacloud.io',
         'access_key': None,
         'secret_key': None
     },
-    'API2': {
+    'APP2': {
         'url':        'https://api2.prismacloud.io',
         'access_key': None,
         'secret_key': None
     },
-    'API3': {
+    'APP3': {
         'url':        'https://api3.prismacloud.io',
         'access_key': None,
         'secret_key': None
