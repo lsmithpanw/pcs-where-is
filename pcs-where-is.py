@@ -31,9 +31,9 @@ pc_parser.add_argument(
     type=str,
     help='(Optional) - Limit search to a stack (defined in the config file)')
 pc_parser.add_argument(
-    '--no_cache',
+    '-c', '--cache',
     action='store_true',
-    help='(Optional) Clear cached data (Cache has an eight hour lifetime)')
+    help='(Optional) Cache data (Cache has an eight hour lifetime)')
 pc_parser.add_argument(
     '-d', '--debug',
     action='store_true',
@@ -54,26 +54,31 @@ def output(output_data=''):
 # Helpers.
 ##########################################################################################
 
-def login(url, access_key, secret_key, ca_bundle):
-    endpoint = '%s/login' % url
+def login(login_url, access_key, secret_key, ca_bundle):
+    action = 'POST'
+    url = '%s/login' % login_url
     headers = {'Content-Type': 'application/json'}
-    data = json.dumps({'username': access_key, 'password': secret_key})
-    api_response = requests.request('POST', endpoint, headers=headers, data=data, verify=ca_bundle)
+    requ_data = json.dumps({'username': access_key, 'password': secret_key})
+    api_response = requests.request(action, url, headers=headers, data=requ_data, verify=ca_bundle)
     if api_response.ok:
         api_response = json.loads(api_response.content)
         token = api_response.get('token')
     else:
-        output('API (%s) responded with an error\n%s' % (endpoint, api_response.text))
+        output('API (%s) responded with an error\n%s' % (url, api_response.text))
         sys.exit(1)
     if DEBUG_MODE:
-        output(endpoint)
-        output(token)
+        output(action)
+        output(url)
+        output(requ_data)
+        output(api_response)
+        # output(token)
+        output()
     return token
 
 def execute(action, url, token, ca_bundle=None, requ_data=None):
     headers = {'Content-Type': 'application/json'}
     headers['x-redlock-auth'] = token
-    api_response = requests.request(action, url, headers=headers, verify=ca_bundle, data=requ_data)
+    api_response = requests.request(action, url, headers=headers, data=requ_data, verify=ca_bundle)
     result = None
     if api_response.status_code in [401, 429, 500, 502, 503, 504]:
         for _ in range(1, 3):
@@ -82,7 +87,12 @@ def execute(action, url, token, ca_bundle=None, requ_data=None):
             if api_response.ok:
                 break # retry loop
     if DEBUG_MODE:
-        output(api_response.text)
+        output(action)
+        output(url)
+        output(requ_data)
+        output(api_response.status_code)
+        # output(api_response.text)
+        output()
     if api_response.ok:
         try:
             result = json.loads(api_response.content)
@@ -179,7 +189,7 @@ for customer in CONFIG['CUSTOMERS']:
             if os.path.isfile(customers_file_name):
                 hours_ago = datetime.now() - timedelta(hours=8)
                 customers_file_date = datetime.fromtimestamp(os.path.getctime(customers_file_name))
-                if customers_file_date < hours_ago or args.no_cache:
+                if customers_file_date < hours_ago or args.cache == False:
                     if DEBUG_MODE:
                         output('Deleting cached stack file: %s' % customers_file_name)
                     os.remove(customers_file_name)
@@ -190,7 +200,7 @@ for customer in CONFIG['CUSTOMERS']:
                     tenants = json.load(f)
             else:
                 tenants = execute('GET', '%s/_support/customer' % CONFIG['STACKS'][stack]['url'], token, CONFIG['CA_BUNDLE'])
-                if tenants and not args.no_cache:
+                if tenants and args.cache:
                     result_file = open(customers_file_name, 'w')
                     result_file.write(json.dumps(tenants))
                     result_file.close()
