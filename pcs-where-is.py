@@ -178,6 +178,9 @@ if os.path.isfile(args.customer_name):
 else:
     CONFIG['CUSTOMERS'] = [args.customer_name]
 
+output('Checking: %s' % ', '.join(CONFIG['STACKS']))
+output()
+
 for customer in CONFIG['CUSTOMERS']:
     found = 0
     for stack in CONFIG['STACKS']:
