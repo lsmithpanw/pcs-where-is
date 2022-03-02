@@ -19,7 +19,8 @@ Use `-h` to review all command-line parameters.
 ### Example
 
 ```bash
-tkishel  ~ | Code | pcs-inspect | pcs-where-is ./pcs-where-is.py example
+tkishel ~ pcs-where-is.py example
+Checking: APP, APP2, APP3, APP4, APPEU, APP2EU
 
 example found on API2 as Example Customer
 	Customer ID:   12345
