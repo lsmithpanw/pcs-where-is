@@ -178,15 +178,14 @@ if os.path.isfile(args.customer_name):
 else:
     CONFIG['CUSTOMERS'] = [args.customer_name]
 
-output('Checking: %s' % ', '.join(CONFIG['STACKS']))
-output()
-
 for customer in CONFIG['CUSTOMERS']:
     found = 0
     for stack in CONFIG['STACKS']:
         if args.stack and args.stack.lower() != stack.lower():
             continue
         if CONFIG['STACKS'][stack]['access_key']:
+            output('Checking: %s' % stack)
+            output()
             token = login(CONFIG['STACKS'][stack]['url'], CONFIG['STACKS'][stack]['access_key'], CONFIG['STACKS'][stack]['secret_key'], CONFIG['CA_BUNDLE'])
             customers_file_name = '/tmp/%s-customers.json' % re.sub(r'\W+', '', stack).lower()
             if os.path.isfile(customers_file_name):
