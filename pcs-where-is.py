@@ -88,7 +88,7 @@ def execute(action, url, token, ca_bundle=None, requ_data=None):
             if api_response.ok:
                 break # retry loop
     if api_response.status_code == 403:
-        output('403 Unauthorized')
+        output('403 Unauthorized: check that credentials are valid and are authorized to access the API.')
         return
 
     if DEBUG_MODE:
