@@ -81,11 +81,16 @@ def execute(action, url, token, ca_bundle=None, requ_data=None):
     api_response = requests.request(action, url, headers=headers, data=requ_data, verify=ca_bundle)
     result = None
     if api_response.status_code in [401, 429, 500, 502, 503, 504]:
+        output('Exceptional API response code %d received from %s. Waiting and then retrying' % (api_response.status_code, url))      
         for _ in range(1, 3):
             time.sleep(16)
             api_response = requests.request(action, url, headers=headers, verify=ca_bundle, data=requ_data)
             if api_response.ok:
                 break # retry loop
+    if api_response.status_code == 403:
+        output('403 Unauthorized: check that credentials are valid and are authorized to access the API.')
+        return
+
     if DEBUG_MODE:
         output(action)
         output(url)
