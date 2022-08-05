@@ -114,7 +114,10 @@ def find_customer(stack, tenants, customer_name, url, ca_bundle, token):
     for customer in tenants:
         customer_lower = customer['customerName'].lower()
         prisma_id = str(customer['prismaId'])
-        if customer_name_lower in customer_lower or customer_name_lower in prisma_id:
+        if customer['licenseDetails']['marketplaceData'] is not None:
+            tenant_id = str(customer['licenseDetails']['marketplaceData']['tenantId'])
+            serial_num = str(customer['licenseDetails']['marketplaceData']['serialNumber'])
+        if customer_name_lower in customer_lower or customer_name_lower in prisma_id or customer_name_lower in tenant_id or customer_name_lower in serial_num:
             output('%s found on %s as %s' % (customer_name, stack, customer['customerName']))
             if DEBUG_MODE:
                 output(json.dumps(customer, indent=4))
