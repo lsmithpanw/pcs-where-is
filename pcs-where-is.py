@@ -5,6 +5,7 @@ import json
 import os
 import re
 import requests
+import signal
 import sys
 import time
 
@@ -47,6 +48,12 @@ DEBUG_MODE = args.debug
 # Helpers.
 ##########################################################################################
 
+def handler(signum, frame):
+    print()
+    exit(1)
+
+signal.signal(signal.SIGINT, handler)
+
 def output(output_data=''):
     print(output_data)
 
@@ -81,7 +88,7 @@ def execute(action, url, token, ca_bundle=None, requ_data=None):
     api_response = requests.request(action, url, headers=headers, data=requ_data, verify=ca_bundle)
     result = None
     if api_response.status_code in [401, 429, 500, 502, 503, 504]:
-        output('Exceptional API response code %d received from %s. Waiting and then retrying' % (api_response.status_code, url))      
+        output('Exceptional API response code %d received from %s. Waiting and then retrying' % (api_response.status_code, url))
         for _ in range(1, 3):
             time.sleep(16)
             api_response = requests.request(action, url, headers=headers, verify=ca_bundle, data=requ_data)
