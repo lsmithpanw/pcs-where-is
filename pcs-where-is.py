@@ -72,7 +72,7 @@ def login(login_url, access_key, secret_key, ca_bundle):
         token = api_response.get('token')
     else:
         output('API (%s) responded with an error\n%s' % (url, api_response.text))
-        sys.exit(1)
+        return
     if DEBUG_MODE:
         output(action)
         output(url)
@@ -203,6 +203,10 @@ for customer in CONFIG['CUSTOMERS']:
             output('Checking: %s' % stack)
             output()
             token = login(CONFIG['STACKS'][stack]['url'], CONFIG['STACKS'][stack]['access_key'], CONFIG['STACKS'][stack]['secret_key'], CONFIG['CA_BUNDLE'])
+            if (not token):
+                output('Skipping %s because of auth failure.' % stack)
+                output()
+                continue
             customers_file_name = '/tmp/%s-customers.json' % re.sub(r'\W+', '', stack).lower()
             if os.path.isfile(customers_file_name):
                 hours_ago = datetime.now() - timedelta(hours=8)
