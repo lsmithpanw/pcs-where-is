@@ -204,7 +204,7 @@ for customer in CONFIG['CUSTOMERS']:
             output()
             token = login(CONFIG['STACKS'][stack]['url'], CONFIG['STACKS'][stack]['access_key'], CONFIG['STACKS'][stack]['secret_key'], CONFIG['CA_BUNDLE'])
             if (not token):
-                output('Skipping %s' % stack)
+                output('Skipping %s because of auth failure.' % stack)
                 output()
                 continue
             customers_file_name = '/tmp/%s-customers.json' % re.sub(r'\W+', '', stack).lower()
