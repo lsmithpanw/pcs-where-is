@@ -8,14 +8,16 @@ import requests
 import signal
 import sys
 import time
+import arrow
 
 from datetime import datetime, timedelta
+from dateutil.tz import gettz
 
 ##########################################################################################
 # Process arguments / parameters.
 ##########################################################################################
 
-pc_parser = argparse.ArgumentParser(description='Where is this Tenant?', prog=os.path.basename(__file__))
+pc_parser = argparse.ArgumentParser(description='Where is this Tenant? Who are its users and when did they last login?', prog=os.path.basename(__file__))
 
 pc_parser.add_argument(
     'customer_name',
@@ -39,6 +41,10 @@ pc_parser.add_argument(
     '-d', '--debug',
     action='store_true',
     help='(Optional) Enable debugging')
+pc_parser.add_argument(
+    '-u', '--users',
+    action='store_true',
+    help='(Optional) Enumerate tenant users and their last login time')
 
 args = pc_parser.parse_args()
 
@@ -151,6 +157,23 @@ def find_customer(stack, tenants, customer_name, url, ca_bundle, token):
                     current_usage_count = sum(sum(c.values()) for c in current_usage['counts'].values())
                     output('\tUsed Credits:  %s' % current_usage_count)
             output()
+            if args.users:
+                users_query = json.dumps({'customerName': customer['customerName']})
+                users = execute('POST', '%s/v2/_support/user' % url, token, ca_bundle, users_query)
+                if DEBUG_MODE:
+                    output(json.dumps(users, indent=4))
+                if users:
+                    output('%-*s\t\t%-*s\t\t%s' % (25, 'Name', 33, 'Email address', 'Last Login'))
+                    for user in users:
+                        lastLogin = ""
+                        tz = gettz(user['timeZone'])
+                        if user['lastLoginTs'] == -1:
+                            lastLogin = 'Never'
+                        else:
+                            ar = arrow.Arrow.fromtimestamp(user['lastLoginTs']/1000, tz)
+                            lastLogin = '%s - %s' % (ar.format('YYYY-MM-DD'), ar.humanize())
+                        output('%-*s\t\t%-*s\t\t%s' % (25, user['displayName'], 33, user['email'], lastLogin))
+
             count += 1
     return count
 
