@@ -42,7 +42,7 @@ pc_parser.add_argument(
 pc_parser.add_argument(
     '-c', '--cache',
     action='store_true',
-    help='(Optional) Cache data (Cache has an eight hour lifetime)')
+    help='(Optional) Cache responses from the API (eight hour lifetime)')
 pc_parser.add_argument(
     '-d', '--debug',
     action='store_true',
@@ -51,7 +51,11 @@ pc_parser.add_argument(
     '-u', '--users',
     action='store_true',
     help='(Optional) Enumerate tenant users and their last login time')
-
+pc_parser.add_argument(
+    '--sort',
+    default='name',
+    choices=['login', 'name'],
+    help="(Optional) Sort tenant users by login or name (Default: 'name')")
 args = pc_parser.parse_args()
 
 DEBUG_MODE = args.debug
@@ -168,7 +172,10 @@ def find_customer(stack_name, tenant_list, customer_name, url, ca_bundle, auth_t
                 if DEBUG_MODE:
                     output(json.dumps(users, indent=4))
                 if users:
-                    output('%-*s\t\t%-*s\t\t%s' % (25, 'Name', 33, 'Email address', 'Last Login'))
+                    output('%-*s\t\t%-*s\t\t%s' % (25, 'Name', 33, 'Email Address', 'Last Login'))
+                    output('%-*s\t\t%-*s\t\t%s' % (25, '----', 33, '-------------', '----------'))
+                    if args.sort == 'login':
+                        users = sorted(users, key=lambda u: u['lastLoginTs'], reverse=True)
                     for user in users:
                         last_login = ''
                         time_zone = gettz(user['timeZone'])
