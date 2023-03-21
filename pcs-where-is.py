@@ -128,6 +128,17 @@ def execute(action, url, auth_token, ca_bundle=None, requ_data=None):
             sys.exit(1)
     return result
 
+def define_usage(url, auth_token, ca_bundle, tenant, range):
+    usage_query = json.dumps({'customerName': tenant['customerName'], 'timeRange': {'type':'relative','value': {'amount': 1,'unit': range}}})
+    usage = execute('POST', '%s/_support/license/api/v1/usage/time_series' % url, auth_token, ca_bundle, usage_query)
+    if DEBUG_MODE:
+        output(json.dumps(usage, indent=4))
+    if usage and 'dataPoints' in usage and len(usage['dataPoints']) > 0:
+        current_usage = usage['dataPoints'][-1]
+        if 'counts' in current_usage and len(current_usage['counts']) > 0:
+            current_usage_count = sum(sum(c.values()) for c in current_usage['counts'].values())
+            output('\tCredit snapshot, end of period (%s):  %s' % (range,current_usage_count))
+
 def find_customer(stack_name, tenant_list, customer_name, url, ca_bundle, auth_token):
     count = 0
     if not tenant_list:
@@ -155,16 +166,11 @@ def find_customer(stack_name, tenant_list, customer_name, url, ca_bundle, auth_t
             output('\tPrisma ID:     %s' % tenant['prismaId'])
             output('\tEval:          %s' % tenant['eval'])
             output('\tActive:        %s' % tenant['active'])
-            output('\tCredits:       %s' % tenant['workloads'])
-            usage_query = json.dumps({'customerName': tenant['customerName'], 'timeRange': {'type':'relative','value': {'amount': 1,'unit': 'month'}}})
-            usage = execute('POST', '%s/_support/license/api/v1/usage/time_series' % url, auth_token, ca_bundle, usage_query)
-            if DEBUG_MODE:
-                output(json.dumps(usage, indent=4))
-            if usage and 'dataPoints' in usage and len(usage['dataPoints']) > 0:
-                current_usage = usage['dataPoints'][-1]
-                if 'counts' in current_usage and len(current_usage['counts']) > 0:
-                    current_usage_count = sum(sum(c.values()) for c in current_usage['counts'].values())
-                    output('\tUsed Credits:  %s' % current_usage_count)
+            output('\tCredits Available:       %s' % tenant['workloads'])
+            define_usage(url, auth_token, ca_bundle, tenant, "day")
+            define_usage(url, auth_token, ca_bundle, tenant, "month")
+            define_usage(url, auth_token, ca_bundle, tenant, "year")
+
             output()
             if args.users:
                 users_query = json.dumps({'customerName': tenant['customerName']})
