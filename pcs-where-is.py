@@ -56,6 +56,10 @@ pc_parser.add_argument(
     default='name',
     choices=['login', 'name'],
     help="(Optional) Sort tenant users by login or name (Default: 'name')")
+pc_parser.add_argument(
+    '-l', '--licensing',
+    action='store_true',
+    help='(Optional) Detailed licensing info')
 args = pc_parser.parse_args()
 
 DEBUG_MODE = args.debug
@@ -172,6 +176,22 @@ def find_customer(stack_name, tenant_list, customer_name, url, ca_bundle, auth_t
             define_usage(url, auth_token, ca_bundle, tenant, "year")
 
             output()
+            if args.licensing:
+                vcg_dspm = {"customerName":"","accountIds":[],"accountGroupIds":[],"timeRange":{"type":"relative","value":{"amount":"3","unit":"month"}},"cloudTypes":["gcp","others","oci","azure","aws","alibaba_cloud","ibm","repositories"]}
+                vcg_dspm['customerName'] = tenant['customerName']
+                vcg_dspm_query = json.dumps(vcg_dspm)
+                licensing_page = execute('POST', '%s/_support/license/api/v2/usage' % url, auth_token, ca_bundle, vcg_dspm_query)
+                output('VCG and DSPM Usage')
+                output(json.dumps(licensing_page['stats'], indent=4))
+                if licensing_page['nextPageToken'] is not None:
+                    output('WARN: Additional page not pulled')
+
+                ccs = {"customerName":"","accountIds":[],"accountGroupIds":[],"timeRange":{"type":"relative","value":{"amount":"3","unit":"month"}},"cloudTypes":["repositories"]}
+                ccs['customerName'] = tenant['customerName']
+                ccs_query = json.dumps(ccs)
+                licensing_page = execute('POST', '%s/_support/license/api/v2/usage' % url, auth_token, ca_bundle, ccs_query)
+                output(json.dumps(licensing_page['stats'], indent=4))
+
             if args.users:
                 users_query = json.dumps({'customerName': tenant['customerName']})
                 users = execute('POST', '%s/v2/_support/user' % url, auth_token, ca_bundle, users_query)
