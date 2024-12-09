@@ -193,6 +193,16 @@ def find_customer(stack_name, tenant_list, customer_name, url, ca_bundle, auth_t
                     for key, value in licensing_page['stats'].items():
                         if value > 0 and key != 'total':
                             output(f"{friendly_names[key]:<32}{value:>7}")
+                    licensing_query = {"customerName":"","timeRange":{"type":"relative","value":{"amount":"3","unit":"month"}},"cloud.type":["gcp","others","oci","azure","aws","alibaba_cloud","ibm"]}
+                    licensing_query['customerName'] = tenant['customerName']
+                    license_info = execute('POST', '%s/_support/license' % url, auth_token, ca_bundle, json.dumps(licensing_query))
+                    if license_info and license_info['activePlanType']:
+                        match (license_info['activePlanType']):
+                            case 'RS_STANDARD': license_type = 'Standard / A la carte'
+                            case 'RS_FOUNDATION': license_type = 'Foundations bundle'
+                            case 'RS_ADVANCED': license_type = 'Advanced bundle'
+                            case _: license_type = 'Unknown (%s)' % license_info['activePlanType']
+                        output('\nActive License Type: %s' % license_type)
                     output('')
                 else:
                     output('WARN: No license data for tenant\n')
@@ -296,4 +306,3 @@ for customer in CONFIG['CUSTOMERS']:
             found += find_customer(stack, tenants, customer, CONFIG['STACKS'][stack]['url'], CONFIG['CA_BUNDLE'], token)
     if found == 0:
         output('%s not found on any configured stack' % customer)
-    output()
