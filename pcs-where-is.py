@@ -181,16 +181,21 @@ def find_customer(stack_name, tenant_list, customer_name, url, ca_bundle, auth_t
                 vcg_dspm['customerName'] = tenant['customerName']
                 vcg_dspm_query = json.dumps(vcg_dspm)
                 licensing_page = execute('POST', '%s/_support/license/api/v2/usage' % url, auth_token, ca_bundle, vcg_dspm_query)
-                output('VCG and DSPM Usage')
-                output(json.dumps(licensing_page['stats'], indent=4))
-                if licensing_page['nextPageToken'] is not None:
-                    output('WARN: Additional page not pulled')
-
-                ccs = {"customerName":"","accountIds":[],"accountGroupIds":[],"timeRange":{"type":"relative","value":{"amount":"3","unit":"month"}},"cloudTypes":["repositories"]}
-                ccs['customerName'] = tenant['customerName']
-                ccs_query = json.dumps(ccs)
-                licensing_page = execute('POST', '%s/_support/license/api/v2/usage' % url, auth_token, ca_bundle, ccs_query)
-                output(json.dumps(licensing_page['stats'], indent=4))
+                output('License Usage Detail')
+                output('--------------------')
+                if licensing_page and licensing_page['stats'] and len(licensing_page['stats']) > 1:
+                    if DEBUG_MODE:
+                        output(json.dumps(licensing_page['stats'], indent=4))
+                    if licensing_page['nextPageToken'] is not None:
+                        output('WARN: Additional page not pulled. Please file an issue on github.')
+                    friendly_names = {'data_store': 'DSPM', 'iac': 'Infrastructure as Code', 'total': 'Total', 'ccs_secret_scanning': 'Secret scanning', 'serverless': 'Serverless', 'foundation': 'Foundations bundle', 'ccs_sca': 'SCA', 's3': 'Old DLP (AWS)', 'iaas': 'CSPM', 'iam': 'CIEM', 'cdem': 'CDEM',  'agentless_host': 'Agentless host scanning', 'host': 'Host security', 'container': 'Container security', 'cas_cicd_security': 'CI/CD security', 'ccs_iac_developer': 'Infrastructure as code', 'azure_blob_storage': 'Old DLP (Azure)', 'waas': 'WAAS', 'agentless_container': 'Agentless container scanning', 'advanced': 'Advanced bundle', 'container_caas': 'Containers as a Service security'}
+                    output(f"{friendly_names['total']:<32}{licensing_page['stats']['total']:>7}")
+                    for key, value in licensing_page['stats'].items():
+                        if value > 0 and key != 'total':
+                            output(f"{friendly_names[key]:<32}{value:>7}")
+                    output('')
+                else:
+                    output('WARN: No license data for tenant\n')
 
             if args.users:
                 users_query = json.dumps({'customerName': tenant['customerName']})
