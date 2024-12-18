@@ -197,11 +197,14 @@ def find_customer(stack_name, tenant_list, customer_name, url, ca_bundle, auth_t
                     licensing_query['customerName'] = tenant['customerName']
                     license_info = execute('POST', '%s/_support/license' % url, auth_token, ca_bundle, json.dumps(licensing_query))
                     if license_info and license_info['activePlanType']:
-                        match (license_info['activePlanType']):
-                            case 'RS_STANDARD': license_type = 'Standard / A la carte'
-                            case 'RS_FOUNDATION': license_type = 'Foundations bundle'
-                            case 'RS_ADVANCED': license_type = 'Advanced bundle'
-                            case _: license_type = 'Unknown (%s)' % license_info['activePlanType']
+                        if (license_info['activePlanType'] == 'RS_STANDARD'):
+                            license_type = 'Standard / A la carte'
+                        elif (license_info['activePlanType'] == 'RS_FOUNDATION'):
+                            license_type = 'Foundations bundle'
+                        elif (license_info['activePlanType'] == 'RS_ADVANCED'):
+                            license_type = 'Advanced bundle'
+                        else:
+                            license_type = 'Unknown (%s)' % license_info['activePlanType']
                         output('\nActive License Type: %s' % license_type)
                     output('')
                 else:
